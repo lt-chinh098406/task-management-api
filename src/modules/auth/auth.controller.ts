@@ -1,34 +1,34 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { GetUser } from '@/common/decorators';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { ApiBearerAuth, ApiCreatedResponse, ApiTags } from '@nestjs/swagger';
+import { CreateUserDto } from '../user/dto/create-user.dto';
+import { LoginDto } from '../user/dto/login.dto';
+import { User } from '../user/entities/user.entity';
 import { AuthService } from './auth.service';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { AuthModel } from './models/auth.model';
 
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post()
-  create(@Body() createAuthDto: CreateAuthDto) {
-    return this.authService.create(createAuthDto);
+  @Post('register')
+  @ApiCreatedResponse({ description: 'User registration', type: AuthModel })
+  register(@Body() body: CreateUserDto): Promise<AuthModel> {
+    return this.authService.register(body);
   }
 
-  @Get()
-  findAll() {
-    return this.authService.findAll();
+  @Post('login')
+  @ApiCreatedResponse({ description: 'User Login OK', type: User })
+  login(@Body() body: LoginDto): Promise<AuthModel> {
+    return this.authService.login(body);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.authService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
-    return this.authService.update(+id, updateAuthDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.authService.remove(+id);
+  @ApiBearerAuth()
+  @Get('me')
+  @UseGuards(AuthGuard())
+  me(@GetUser() user: User): User {
+    return user;
   }
 }
