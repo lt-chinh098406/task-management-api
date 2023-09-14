@@ -1,26 +1,89 @@
-import { Injectable } from '@nestjs/common';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { PostgresErrorCode } from '@/common/enums/postgres-error-code';
+import { JwtPayload } from '@/common/interfaces/jwt-payload';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+import { CreateUserDto } from '../user/dto/create-user.dto';
+import { LoginDto } from '../user/dto/login.dto';
+import { UserService } from '../user/user.service';
+import { AuthModel } from './models/auth.model';
 
 @Injectable()
 export class AuthService {
-  create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
+  constructor(
+    private readonly userService: UserService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  async register(body: CreateUserDto): Promise<AuthModel> {
+    const hashPassword = await bcrypt.hash(body.password, 10);
+
+    try {
+      const user = await this.userService.createUser({
+        ...body,
+        password: hashPassword,
+      });
+
+      const { id, username } = user;
+      const jwt = await this.convertToJwt(id, username);
+
+      return jwt;
+    } catch (error) {
+      if (error?.code === PostgresErrorCode.UniqueViolation) {
+        throw new HttpException('User with this email or username already exists', HttpStatus.BAD_REQUEST);
+      }
+
+      throw new HttpException('Something went wrong', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
-  findAll() {
-    return `This action returns all auth`;
+  async login(body: LoginDto): Promise<AuthModel> {
+    try {
+      let user = null;
+
+      user = await this.userService.findOneByUsername(body.username);
+
+      if (!user) {
+        throw new HttpException('User does not exist', HttpStatus.NOT_FOUND);
+      }
+
+      const isPasswordValid = await bcrypt.compare(body.password, user.password);
+
+      if (!isPasswordValid) {
+        throw new HttpException('Invalid credentials', HttpStatus.BAD_REQUEST);
+      }
+
+      const { id, username } = user;
+      const jwt = await this.convertToJwt(id, username);
+
+      return jwt;
+    } catch (error) {
+      if (error?.code === PostgresErrorCode.UniqueViolation) {
+        throw new HttpException('User with this email or username already exists', HttpStatus.BAD_REQUEST);
+      }
+
+      throw new HttpException('Something went wrong', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
-  }
+  async convertToJwt(userId: string, username: string): Promise<AuthModel> {
+    const payload: JwtPayload = { username, sub: userId };
 
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
-  }
+    const accessToken = await this.jwtService.signAsync(payload, {
+      secret: this.configService.get<string>('JWT_SECRET'),
+      expiresIn: this.configService.get<string>('JWT_EXPIRATION_TIME'),
+    });
 
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+    const refreshToken = await this.jwtService.signAsync(payload, {
+      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRATION_TIME'),
+    });
+
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    };
   }
 }

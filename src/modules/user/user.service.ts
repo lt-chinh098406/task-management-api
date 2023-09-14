@@ -1,13 +1,48 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { User } from './entities/user.entity';
 
 @Injectable()
 export class UserService {
-  create(createUserDto: CreateUserDto) {
-    console.log(createUserDto);
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+  ) {}
 
-    return 'This action adds a new user';
+  async createUser(user: CreateUserDto): Promise<User> {
+    try {
+      const newUser = this.userRepository.create({
+        ...user,
+        avatar: 'https://i.pravatar.cc/300',
+        birthday: new Date(),
+        name: '',
+        phone: '',
+        address: '',
+      });
+
+      await this.userRepository.save(newUser);
+
+      return newUser;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async findOneByUsername(username: string): Promise<User> {
+    try {
+      const user = await this.userRepository.findOneBy({ username });
+
+      if (!user) {
+        throw new HttpException('User does not exist', HttpStatus.NOT_FOUND);
+      }
+
+      return user;
+    } catch (error) {
+      throw error;
+    }
   }
 
   findAll() {

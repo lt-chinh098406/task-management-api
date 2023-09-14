@@ -13,7 +13,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         username: configService.get('POSTGRES_USER'),
         password: configService.get('POSTGRES_PASSWORD'),
         database: configService.get('POSTGRES_DB'),
-        logging: false,
+        logging: true,
         synchronize: true,
         migrations: ['src/migrations/*.{ts,js}'],
         cli: {
