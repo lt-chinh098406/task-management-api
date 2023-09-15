@@ -5,6 +5,10 @@ const config = new DocumentBuilder()
   .setDescription('Task Management API description')
   .setVersion('1.0')
   .addTag('task management')
+  .addSecurity('bearer', {
+    type: 'http',
+    scheme: 'bearer',
+  })
   .build();
 
 const swaggerConfig = {

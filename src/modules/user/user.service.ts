@@ -27,7 +27,7 @@ export class UserService {
 
       return newUser;
     } catch (error) {
-      throw error;
+      throw new HttpException('Something went wrong', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -41,7 +41,7 @@ export class UserService {
 
       return user;
     } catch (error) {
-      throw error;
+      throw new HttpException('Something went wrong', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
