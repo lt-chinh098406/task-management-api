@@ -6,6 +6,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from '../user/dto/create-user.dto';
 import { LoginDto } from '../user/dto/login.dto';
+import { RefreshTokenDto } from '../user/dto/refresh-token.dto';
 import { UserService } from '../user/user.service';
 import { AuthModel } from './models/auth.model';
 
@@ -41,9 +42,7 @@ export class AuthService {
 
   async login(body: LoginDto): Promise<AuthModel> {
     try {
-      let user = null;
-
-      user = await this.userService.findOneByUsername(body.username);
+      const user = await this.userService.findOneByUsername(body.username);
 
       if (!user) {
         throw new HttpException('User does not exist', HttpStatus.NOT_FOUND);
@@ -65,6 +64,27 @@ export class AuthService {
       }
 
       throw new HttpException('Something went wrong', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async refresh(body: RefreshTokenDto): Promise<AuthModel> {
+    try {
+      const payload = await this.jwtService.verifyAsync(body.refresh_token, {
+        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      });
+
+      const user = await this.userService.findOneByUsername(payload.username);
+
+      if (!user) {
+        throw new HttpException('User does not exist', HttpStatus.NOT_FOUND);
+      }
+
+      const { id, username } = user;
+      const jwt = await this.convertToJwt(id, username);
+
+      return jwt;
+    } catch (error) {
+      throw new HttpException('Invalid refresh token', HttpStatus.BAD_REQUEST);
     }
   }
 
