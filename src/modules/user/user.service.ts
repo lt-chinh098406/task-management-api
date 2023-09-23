@@ -1,3 +1,4 @@
+import { PostgresErrorCode } from '@/common/enums/postgres-error-code';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -27,6 +28,10 @@ export class UserService {
 
       return newUser;
     } catch (error) {
+      if (error?.code === PostgresErrorCode.UniqueViolation) {
+        throw new HttpException('User with this email or username already exists', HttpStatus.BAD_REQUEST);
+      }
+
       throw new HttpException('Something went wrong', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
@@ -41,6 +46,10 @@ export class UserService {
 
       return user;
     } catch (error) {
+      if (error?.code === PostgresErrorCode.UniqueViolation) {
+        throw new HttpException('User with this email or username already exists', HttpStatus.BAD_REQUEST);
+      }
+
       throw new HttpException('Something went wrong', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }

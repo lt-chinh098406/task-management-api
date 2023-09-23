@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './modules/auth/auth.module';
-import { User } from './modules/user/entities/user.entity';
+import { TaskModule } from './modules/task/task.module';
 import { UserModule } from './modules/user/user.module';
 import { DatabaseModule } from './utils/database';
 
@@ -20,13 +20,14 @@ import { DatabaseModule } from './utils/database';
         username: configService.get('POSTGRES_USER'),
         password: configService.get('POSTGRES_PASSWORD'),
         database: configService.get('POSTGRES_DB'),
-        entities: [User],
+        autoLoadEntities: true,
         synchronize: true,
       }),
     }),
     DatabaseModule,
     UserModule,
     AuthModule,
+    TaskModule,
   ],
 })
 export class AppModule {}

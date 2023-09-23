@@ -84,7 +84,11 @@ export class AuthService {
 
       return jwt;
     } catch (error) {
-      throw new HttpException('Invalid refresh token', HttpStatus.BAD_REQUEST);
+      if (error?.code === PostgresErrorCode.UniqueViolation) {
+        throw new HttpException('User with this email or username already exists', HttpStatus.BAD_REQUEST);
+      }
+
+      throw new HttpException('Something went wrong', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
